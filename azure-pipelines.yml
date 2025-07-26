@@ -6,7 +6,7 @@ resources:
 
 variables:
   # Container registry service connection established during pipeline creation
-  dockerRegistryServiceConnection: 'f0ba159e-8dc5-499c-8987-b61cb8d8b554'
+  dockerRegistryServiceConnection: 'myazacrconnection'
   imageRepository: 'mypythondockerrepo'
   containerRegistry: 'myazacraks.azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
