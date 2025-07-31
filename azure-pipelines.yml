@@ -22,6 +22,7 @@ stages:
     pool:
       vmImage: $(vmImageName)
     steps:
+
     - task: Docker@2
       displayName: Build Docker image 
       inputs:
@@ -31,6 +32,8 @@ stages:
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
           $(tag)
+        buildContext: $(Build.SourcesDirectory)
+        arguments: --platform linux/amd64
 
     - task: Bash@3
       displayName: Install Trivy
@@ -69,6 +72,7 @@ stages:
     pool:
       vmImage: $(vmImageName)
     steps:
+
     - task: Bash@3
       displayName: Replace Build ID in AKS manifest
       inputs:
