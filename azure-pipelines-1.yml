@@ -1,0 +1,17 @@
+- task: Docker@2
+  inputs:
+    containerRegistry: 'myazacrconnection'
+    repository: 'mypythondockerrepo'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+
+- task: CopyFiles@2
+  inputs:
+    Contents: 'azure-aks.yaml'
+    TargetFolder: '$(build.artifactstagingdirectory)'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
