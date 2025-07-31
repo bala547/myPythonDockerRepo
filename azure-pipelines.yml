@@ -5,7 +5,6 @@ resources:
 - repo: self
 
 variables:
-  # Container registry service connection established during pipeline creation
   dockerRegistryServiceConnection: 'myazacrconnection'
   imageRepository: 'mypythondockerrepo'
   containerRegistry: 'myazacraks.azurecr.io'
@@ -14,11 +13,12 @@ variables:
   vmImageName: 'ubuntu-latest'
 
 stages:
-- stage: Build
-  displayName: Build and push stage
+- stage: CI_CD
+  displayName: Build and Deploy Stage
   jobs:
-  - job: Build
-    displayName: Build
+  
+  - job: BuildAndPush
+    displayName: Build, Scan, and Push Docker Image
     pool:
       vmImage: $(vmImageName)
     steps:
@@ -33,14 +33,14 @@ stages:
           $(tag)
 
     - task: Bash@3
-      displayName: "Install Trivy"
+      displayName: Install Trivy
       inputs:
         targetType: inline
         script: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
 
     - task: Bash@3
-      displayName: "Run Trivy Scan"
+      displayName: Run Trivy Scan
       inputs:
         targetType: inline
         script: |
@@ -57,14 +57,27 @@ stages:
           $(tag)
 
     - task: Bash@3
-      displayName: "Log Image Details"
+      displayName: Log Image Details
       inputs:
         targetType: inline
         script: |
           echo "Pushed Image: $(containerRegistry)/$(imageRepository):$(tag)"
 
+  - job: DeployToAKS
+    displayName: Deploy to AKS
+    dependsOn: BuildAndPush
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Bash@3
+      displayName: Replace Build ID in AKS manifest
+      inputs:
+        targetType: inline
+        script: |
+          sed -i "s|#{Build.BuildId}#|$(tag)|g" azure-aks.yaml
+
     - task: KubernetesManifest@1
-      displayName: "Deploy to AKS"
+      displayName: Deploy to AKS
       inputs:
         action: 'deploy'
         connectionType: 'azureResourceManager'
@@ -72,3 +85,4 @@ stages:
         azureResourceGroup: 'azacraks'
         kubernetesCluster: 'azakscluster'
         manifests: 'azure-aks.yaml'
+        rolloutStatusTimeout: '180'
