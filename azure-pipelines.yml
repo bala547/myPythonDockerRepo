@@ -11,7 +11,6 @@ variables:
   containerRegistry: 'myazacraks.azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
   tag: '$(Build.BuildId)'
-
   vmImageName: 'ubuntu-latest'
 
 stages:
@@ -32,22 +31,23 @@ stages:
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
           $(tag)
-    # Install Trivy Scanner on Agent
+
     - task: Bash@3
       displayName: "Install Trivy"
       inputs:
         targetType: inline
         script: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-    # Run Trivy Scan
+
     - task: Bash@3
       displayName: "Run Trivy Scan"
       inputs:
         targetType: inline
         script: |
           ./bin/trivy image --severity HIGH,CRITICAL,MEDIUM --ignore-unfixed $(containerRegistry)/$(imageRepository):$(tag)
+
     - task: Docker@2
-      displayName: push Docker image to container registry
+      displayName: Push Docker image to container registry
       inputs:
         command: push
         repository: $(imageRepository)
@@ -55,10 +55,20 @@ stages:
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
           $(tag)
-   #Publish Build Information
+
     - task: Bash@3
       displayName: "Log Image Details"
       inputs:
         targetType: inline
         script: |
           echo "Pushed Image: $(containerRegistry)/$(imageRepository):$(tag)"
+
+    - task: KubernetesManifest@1
+      displayName: "Deploy to AKS"
+      inputs:
+        action: 'deploy'
+        connectionType: 'azureResourceManager'
+        azureSubscriptionConnection: 'Azure subscription 1(f0ba159e-8dc5-499c-8987-b61cb8d8b554)'
+        azureResourceGroup: 'azacraks'
+        kubernetesCluster: 'azakscluster'
+        manifests: 'azure-aks.yaml'
